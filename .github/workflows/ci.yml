@@ -1,0 +1,60 @@
+name: CI
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+    # schedule:
+    #     - cron: "0 0 * * *" # Runs daily at midnight UTC
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Log trigger type and timestamp
+              run: |
+                  echo "Triggered by: ${{ github.event_name }}"
+                  echo "Timestamp: $(date -u)"
+
+            - name: Print CI started
+              run: echo "CI started"
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20" # Use Node.js 20 (you can change this)
+
+            - name: Cache node_modules
+              id: cache-node-modules
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      **/node_modules
+                  key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+                  restore-keys: |
+                      ${{ runner.os }}-node-${{ matrix.node-version }}-
+                      ${{ runner.os }}-node-
+                      ${{ runner.os }}-
+
+            - name: Log cache status
+              run: |
+                  if [ "${{ steps.cache-node-modules.outputs.cache-hit }}" = "true" ]; then
+                      echo "✅ Cache hit! Using cached node_modules."
+                  else
+                      echo "❌ Cache miss! Installing dependencies..."
+                  fi
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Build project
+              run: npm run build
+
+            - name: Run tests
+              run: npm test
